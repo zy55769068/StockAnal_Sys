@@ -18,6 +18,8 @@ jsonpath==0.82.2
 openpyxl==3.1.5
 flask_swagger_ui
 sqlalchemy
+flask-cors
+flask-caching
 # 新增依赖
 gunicorn==20.1.0  # 生产环境WSGI服务器
 PyYAML==6.0  # YAML支持
