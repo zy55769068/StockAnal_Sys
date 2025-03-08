@@ -172,6 +172,15 @@ bash start.sh monitor    # 以监控模式运行（自动重启）
 bash start.sh logs       # 查看日志
 ```
 
+### Docker启动
+
+```bash
+docker-compose up -d
+```
+可以挂载sqlite_data，在env文件中设置USE_DATABASE=True
+可以使用redis缓存，在env文件中设置USE_REDIS_CACHE=True
+挂载.env文件到本地
+
 ### 主要功能页面
 
 1. **首页** (`/`)

@@ -1,9 +1,9 @@
 numpy>=1.24.0
 pandas==2.2.2
-scipy==1.15.1
+scipy>=1.13.0,<1.14.0
 akshare
 tqdm==4.67.1
-openai-0.28.0
+openai==0.28.0
 requests==2.32.3
 python-dotenv==1.0.1
 flask==3.1.0
@@ -17,7 +17,9 @@ lxml==4.9.4
 jsonpath==0.82.2
 openpyxl==3.1.5
 flask_swagger_ui
-
+sqlalchemy
+flask-cors
+flask-caching
 # 新增依赖
 gunicorn==20.1.0  # 生产环境WSGI服务器
 PyYAML==6.0  # YAML支持
