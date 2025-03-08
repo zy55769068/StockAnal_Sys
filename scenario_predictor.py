@@ -20,7 +20,7 @@ class ScenarioPredictor:
         self.analyzer = analyzer
         self.openai_api_key = os.getenv('OPENAI_API_KEY', os.getenv('OPENAI_API_KEY'))
         self.openai_api_url = os.getenv('OPENAI_API_URL')
-        self.openai_model = os.getenv('OPENAI_MODEL', 'gemini-2.0-pro-exp-02-05')
+        self.openai_model = os.getenv('OPENAI_API_MODEL', 'gemini-2.0-pro-exp-02-05')
 
 
     def generate_scenarios(self, stock_code, market_type='A', days=60):
