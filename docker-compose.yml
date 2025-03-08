@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  stockAnal_sys:
+  stockanal_sys:
     build: .
     ports:
       - "8888:8888"
