@@ -41,7 +41,7 @@ class StockAnalyzer:
         # 设置 OpenAI API (原来是Gemini API)
         self.openai_api_key = os.getenv('OPENAI_API_KEY', os.getenv('OPENAI_API_KEY'))
         self.openai_api_url = os.getenv('OPENAI_API_URL', 'https://api.openai.com/v1')
-        self.openai_model = os.getenv('OPENAI_MODEL', 'gemini-2.0-pro-exp-02-05')
+        self.openai_model = os.getenv('OPENAI_API_MODEL', 'gemini-2.0-pro-exp-02-05')
         self.news_model = os.getenv('NEWS_MODEL')
 
         # 配置参数
