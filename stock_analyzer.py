@@ -57,6 +57,8 @@ class StockAnalyzer:
         # 添加缓存初始化
         self.data_cache = {}
 
+        #json匹配flag
+        self.json_match_flag = True
     def get_stock_data(self, stock_code, market_type='A', start_date=None, end_date=None):
         """获取股票数据"""
         import akshare as ak
@@ -612,7 +614,29 @@ class StockAnalyzer:
                 elif sentiment == 'bearish' and action in ['buy', 'cautious_buy']:
                     action = 'hold'
                     sentiment_adjustment = "（市场氛围悲观，建议等待更好买点）"
+            elif self.json_match_flag==False:
+                import re
 
+                # 如果JSON解析失败，尝试从原始内容中匹配市场情绪
+                sentiment_pattern = r'(bullish|neutral|bearish)'
+                sentiment_match = re.search(sentiment_pattern, news_data.get('original_content', ''))
+                
+                if sentiment_match:
+                    sentiment_map = {
+                        'bullish': 'bullish',
+                        'neutral': 'neutral',
+                        'bearish': 'bearish'
+                    }
+                    sentiment = sentiment_map.get(sentiment_match.group(1), 'neutral')
+                    
+                    if sentiment == 'bullish' and action in ['hold', 'cautious_hold']:
+                        action = 'cautious_buy'
+                        sentiment_adjustment = "（市场氛围积极，可适当提高仓位）"
+                    elif sentiment == 'bearish' and action in ['buy', 'cautious_buy']:
+                        action = 'hold'
+                        sentiment_adjustment = "（市场氛围悲观，建议等待更好买点）"
+
+                    
             # 4. Technical indicators adjustment (Dimension 2: "Peak Detection System")
             technical_adjustment = ""
             if technical_data:
@@ -735,7 +759,7 @@ class StockAnalyzer:
 
     def get_stock_news(self, stock_code, market_type='A', limit=5):
         """
-        获取股票相关新闻和实时信息，通过OpenAI API调用news模型获取
+        获取股票相关新闻和实时信息，通过OpenAI API调用function calling方式获取
         参数:
             stock_code: 股票代码
             market_type: 市场类型 (A/HK/US)
@@ -760,13 +784,14 @@ class StockAnalyzer:
 
             # 构建新闻查询的prompt
             market_name = "A股" if market_type == 'A' else "港股" if market_type == 'HK' else "美股"
-            query = f"""请提供以下股票的最新相关新闻和信息:
+            query = f"""请帮我搜索以下股票的最新相关新闻和信息:
             股票名称: {stock_name}
             股票代码: {stock_code}
             市场: {market_name}
             行业: {industry}
-
-            请返回以下格式的JSON数据:
+            
+            请使用search_news工具搜索相关新闻，然后只需要返回JSON格式。
+            按照以下格式的JSON数据返回:
             {{
                 "news": [
                     {{"title": "新闻标题", "date": "YYYY-MM-DD", "source": "新闻来源", "summary": "新闻摘要"}},
@@ -782,32 +807,198 @@ class StockAnalyzer:
                 ],
                 "market_sentiment": "市场情绪(bullish/slightly_bullish/neutral/slightly_bearish/bearish)"
             }}
-
-            每个类别最多返回{limit}条。如果无法获取实际新闻，请基于行业知识生成合理的示例数据。
+            注意只返回json数据，不要返回其他内容。
             """
 
-            messages = [{"role": "user", "content": query}]
+            # 定义函数调用工具
+            tools = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_news",
+                        "description": "搜索股票相关的新闻和信息",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "搜索查询词，用于查找相关新闻"
+                                }
+                            },
+                            "required": ["query"]
+                        }
+                    }
+                }
+            ]
 
             # 使用线程和队列添加超时控制
             import queue
             import threading
             import json
             import openai
+            import requests
 
             result_queue = queue.Queue()
 
+            def search_news(query):
+                """实际执行搜索的函数"""
+                try:
+                    # 获取SERP API密钥
+                    serp_api_key = os.getenv('SERP_API_KEY')
+                    if not serp_api_key:
+                        self.logger.error("未找到SERP_API_KEY环境变量")
+                        return {"error": "未配置搜索API密钥"}
+                    
+                    # 构建搜索查询
+                    search_query = f"{stock_name} {stock_code} {market_name} 最新新闻 公告"
+                    
+                    # 调用SERP API
+                    url = "https://serpapi.com/search"
+                    params = {
+                        "engine": "google",
+                        "q": search_query,
+                        "api_key": serp_api_key,
+                        "tbm": "nws",  # 新闻搜索
+                        "num": limit * 2  # 获取更多结果以便筛选
+                    }
+                    
+                    response = requests.get(url, params=params)
+                    search_results = response.json()
+                    
+                    # 提取新闻结果
+                    news_results = []
+                    if "news_results" in search_results:
+                        for item in search_results["news_results"][:limit]:
+                            news_results.append({
+                                "title": item.get("title", ""),
+                                "date": item.get("date", ""),
+                                "source": item.get("source", ""),
+                                "link": item.get("link", ""),
+                                "snippet": item.get("snippet", "")
+                            })
+                    
+                    # 构建行业新闻查询
+                    industry_query = f"{industry} {market_name} 行业动态 最新消息"
+                    industry_params = {
+                        "engine": "google",
+                        "q": industry_query,
+                        "api_key": serp_api_key,
+                        "tbm": "nws",
+                        "num": limit
+                    }
+                    
+                    industry_response = requests.get(url, params=industry_params)
+                    industry_results = industry_response.json()
+                    
+                    # 提取行业新闻
+                    industry_news = []
+                    if "news_results" in industry_results:
+                        for item in industry_results["news_results"][:limit]:
+                            industry_news.append({
+                                "title": item.get("title", ""),
+                                "date": item.get("date", ""),
+                                "source": item.get("source", ""),
+                                "summary": item.get("snippet", "")
+                            })
+                    
+                    # 获取公告信息 (可能需要专门的API或网站爬取)
+                    # 这里简化处理，实际应用中可能需要更复杂的逻辑
+                    announcements = []
+                    
+                    # 分析市场情绪
+                    # 简单实现：基于新闻标题和摘要的关键词分析
+                    sentiment_keywords = {
+                        'bullish': ['上涨', '增长', '利好', '突破', '强势', '看好', '机会', '利润'],
+                        'slightly_bullish': ['回升', '改善', '企稳', '向好', '期待'],
+                        'neutral': ['稳定', '平稳', '持平', '不变'],
+                        'slightly_bearish': ['回调', '承压', '谨慎', '风险', '下滑'],
+                        'bearish': ['下跌', '亏损', '跌破', '利空', '警惕', '危机', '崩盘']
+                    }
+                    
+                    # 计算情绪得分
+                    sentiment_scores = {k: 0 for k in sentiment_keywords.keys()}
+                    all_text = " ".join([n.get("title", "") + " " + n.get("snippet", "") for n in news_results])
+                    
+                    for sentiment, keywords in sentiment_keywords.items():
+                        for keyword in keywords:
+                            if keyword in all_text:
+                                sentiment_scores[sentiment] += 1
+                    
+                    # 确定主导情绪
+                    if not sentiment_scores or all(score == 0 for score in sentiment_scores.values()):
+                        market_sentiment = "neutral"
+                    else:
+                        market_sentiment = max(sentiment_scores.items(), key=lambda x: x[1])[0]
+                    
+                    return {
+                        "news": news_results,
+                        "announcements": announcements,
+                        "industry_news": industry_news,
+                        "market_sentiment": market_sentiment
+                    }
+                    
+                except Exception as e:
+                    self.logger.error(f"搜索新闻时出错: {str(e)}")
+                    return {"error": str(e)}
+
             def call_api():
                 try:
-                    # 使用OpenAI API调用news模型
+                    messages = [{"role": "user", "content": query}]
+                    
+                    # 第一步：调用模型，让它决定使用工具
                     response = openai.ChatCompletion.create(
-                        model=self.news_model,  # 使用news模型
+                        model=self.news_model,
                         messages=messages,
+                        tools=tools,
+                        tool_choice="auto",
                         temperature=0.7,
-                        max_tokens=4000,
+                        max_tokens=1000,
                         stream=False,
-                        timeout=240
+                        timeout=120
                     )
-                    result_queue.put(response)
+                    
+                    # 检查是否有工具调用
+                    message = response["choices"][0]["message"]
+                    
+                    if "tool_calls" in message:
+                        # 处理工具调用
+                        tool_calls = message["tool_calls"]
+                        
+                        # 准备新的消息列表，包含工具调用结果
+                        messages.append(message)  # 添加助手的消息
+                        
+                        for tool_call in tool_calls:
+                            function_name = tool_call["function"]["name"]
+                            function_args = json.loads(tool_call["function"]["arguments"])
+                            
+                            # 执行搜索
+                            if function_name == "search_news":
+                                search_query = function_args.get("query", f"{stock_name} {stock_code} 新闻")
+                                function_response = search_news(search_query)
+                                
+                                # 添加工具响应到消息
+                                messages.append({
+                                    "tool_call_id": tool_call["id"],
+                                    "role": "tool",
+                                    "name": function_name,
+                                    "content": json.dumps(function_response, ensure_ascii=False)
+                                })
+                        
+                        # 第二步：让模型处理搜索结果并生成最终响应
+                        second_response = openai.ChatCompletion.create(
+                            model=self.news_model,
+                            messages=messages,
+                            temperature=0.7,
+                            max_tokens=4000,
+                            stream=False,
+                            timeout=120
+                        )
+                        
+                        result_queue.put(second_response)
+                    else:
+                        # 如果模型没有选择使用工具，直接使用第一次响应
+                        result_queue.put(response)
+                        
                 except Exception as e:
                     result_queue.put(e)
 
@@ -816,7 +1007,7 @@ class StockAnalyzer:
             api_thread.daemon = True
             api_thread.start()
 
-            # 等待结果，最多等待20秒
+            # 等待结果，最多等待240秒
             try:
                 result = result_queue.get(timeout=240)
 
@@ -828,7 +1019,7 @@ class StockAnalyzer:
                 # 提取回复内容
                 content = result["choices"][0]["message"]["content"].strip()
 
-                # 解析JSON
+                # 尝试解析JSON，但如果失败则保留原始内容
                 try:
                     # 尝试直接解析JSON
                     news_data = json.loads(content)
@@ -839,8 +1030,24 @@ class StockAnalyzer:
                     if json_match:
                         json_str = json_match.group(1)
                         news_data = json.loads(json_str)
+                        self.json_match_flag = True
                     else:
-                        raise ValueError("无法从响应中提取JSON数据")
+                        # 如果仍然无法提取JSON，尝试直接返回响应
+                        self.logger.info(f"无法提取JSON，直接返回响应{content}")
+                        self.json_match_flag = False
+                        news_data = {}
+                        news_data['original_content'] = content
+
+                # 确保数据结构完整
+                if not isinstance(news_data, dict):
+                    news_data = {}
+                
+                for key in ['news', 'announcements', 'industry_news']:
+                    if key not in news_data:
+                        news_data[key] = []
+                
+                if 'market_sentiment' not in news_data:
+                    news_data['market_sentiment'] = 'neutral'
 
                 # 添加时间戳
                 news_data['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -1184,7 +1391,19 @@ class StockAnalyzer:
        - 成交量评分: {score_details.get('volume', 0)}
        - 动量评分: {score_details.get('momentum', 0)}
 
-    5. 投资建议: {recommendation}
+    5. 投资建议: {recommendation}"""
+
+            # 检查是否有JSON解析失败的情况
+            if hasattr(self, 'json_match_flag') and not self.json_match_flag and 'original_content' in news_data:
+                # 如果JSON解析失败，直接使用原始内容
+                prompt += f"""
+
+    6. 相关新闻和市场信息:
+    {news_data.get('original_content', '无法获取相关新闻')}
+    """
+            else:
+                # 正常情况下使用格式化的新闻数据
+                prompt += f"""
 
     6. 近期相关新闻:
     {self._format_news_for_prompt(news_data.get('news', []))}
@@ -1231,9 +1450,9 @@ class StockAnalyzer:
             api_thread.daemon = True
             api_thread.start()
 
-            # 等待结果，最多等待30秒
+            # 等待结果，最多等待240秒
             try:
-                result = result_queue.get(timeout=30)
+                result = result_queue.get(timeout=240)
 
                 # 检查结果是否为异常
                 if isinstance(result, Exception):
