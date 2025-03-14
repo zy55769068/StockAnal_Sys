@@ -16,10 +16,11 @@ from datetime import datetime, timedelta
 
 class IndustryAnalyzer:
     def __init__(self):
+        """初始化行业分析类"""
         self.data_cache = {}
-        self.industry_code_map = {}  # Cache for industry name to code mapping
+        self.industry_code_map = {}  # 缓存行业名称到代码的映射
 
-        # Set up logging
+        # 设置日志记录
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)

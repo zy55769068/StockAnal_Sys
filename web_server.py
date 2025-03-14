@@ -98,7 +98,7 @@ risk_monitor = RiskMonitor(analyzer)
 index_industry_analyzer = IndexIndustryAnalyzer(analyzer)
 industry_analyzer = IndustryAnalyzer()
 
-# Thread-local storage
+# 线程本地存储
 thread_local = threading.local()
 
 
@@ -287,14 +287,14 @@ def update_analysis_task(task_id, status, progress=None, result=None, error=None
             task['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-# Define the custom JSON encoder
+# 定义自定义JSON编码器
 
 
-# In web_server.py, update the convert_numpy_types function to handle NaN values
+# 在web_server.py中，更新convert_numpy_types函数以处理NaN值
 
-# Function to convert NumPy types to Python native types
+# 将NumPy类型转换为Python原生类型的函数
 def convert_numpy_types(obj):
-    """Recursively converts NumPy types in dictionaries and lists to Python native types"""
+    """递归地将字典和列表中的NumPy类型转换为Python原生类型"""
     try:
         import numpy as np
         import math
@@ -347,7 +347,7 @@ def convert_numpy_types(obj):
         return obj
 
 
-# Also update the NumpyJSONEncoder class
+# 同样更新 NumpyJSONEncoder 类
 class NumpyJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         # For NumPy data types
@@ -390,7 +390,7 @@ class NumpyJSONEncoder(json.JSONEncoder):
         return super(NumpyJSONEncoder, self).default(obj)
 
 
-# Custom jsonify function that uses our encoder
+# 使用我们的编码器的自定义 jsonify 函数
 def custom_jsonify(data):
     return app.response_class(
         json.dumps(convert_numpy_types(data), cls=NumpyJSONEncoder),
@@ -1203,7 +1203,7 @@ def api_fundamental_analysis():
 # 资金流向分析路由
 # Add to web_server.py
 
-# API endpoint to get concept fund flow
+# 获取概念资金流向的API端点
 @app.route('/api/concept_fund_flow', methods=['GET'])
 def api_concept_fund_flow():
     try:
@@ -1218,7 +1218,7 @@ def api_concept_fund_flow():
         return jsonify({'error': str(e)}), 500
 
 
-# API endpoint to get individual stock fund flow ranking
+# 获取个股资金流向排名的API端点
 @app.route('/api/individual_fund_flow_rank', methods=['GET'])
 def api_individual_fund_flow_rank():
     try:
@@ -1233,7 +1233,7 @@ def api_individual_fund_flow_rank():
         return jsonify({'error': str(e)}), 500
 
 
-# API endpoint to get individual stock fund flow
+# 获取个股资金流向的API端点
 @app.route('/api/individual_fund_flow', methods=['GET'])
 def api_individual_fund_flow():
     try:
@@ -1252,7 +1252,7 @@ def api_individual_fund_flow():
         return jsonify({'error': str(e)}), 500
 
 
-# API endpoint to get stocks in a sector
+# 获取板块内股票的API端点
 @app.route('/api/sector_stocks', methods=['GET'])
 def api_sector_stocks():
     try:

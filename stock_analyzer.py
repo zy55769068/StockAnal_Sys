@@ -20,7 +20,7 @@ import math
 import json
 import threading
 
-# Thread-local storage
+# 线程局部存储
 thread_local = threading.local()
 
 
@@ -38,7 +38,7 @@ class StockAnalyzer:
         # 加载环境变量
         load_dotenv()
 
-        # 设置 OpenAI API (原来是Gemini API)
+        # 设置 OpenAI API (原 Gemini API)
         self.openai_api_key = os.getenv('OPENAI_API_KEY', os.getenv('OPENAI_API_KEY'))
         self.openai_api_url = os.getenv('OPENAI_API_URL', 'https://api.openai.com/v1')
         self.openai_model = os.getenv('OPENAI_API_MODEL', 'gemini-2.0-pro-exp-02-05')
@@ -57,7 +57,7 @@ class StockAnalyzer:
         # 添加缓存初始化
         self.data_cache = {}
 
-        #json匹配flag
+        # JSON匹配标志
         self.json_match_flag = True
     def get_stock_data(self, stock_code, market_type='A', start_date=None, end_date=None):
         """获取股票数据"""
@@ -68,8 +68,8 @@ class StockAnalyzer:
         cache_key = f"{stock_code}_{market_type}_{start_date}_{end_date}_price"
         if cache_key in self.data_cache:
             cached_df = self.data_cache[cache_key]
-            # Create a copy to avoid modifying the cached data
-            # and ensure date is datetime type for the copy
+            # 创建一个副本以避免修改缓存数据
+            # 并确保副本的日期类型为datetime
             result = cached_df.copy()
             # If 'date' column exists but is not datetime, convert it
             if 'date' in result.columns and not pd.api.types.is_datetime64_any_dtype(result['date']):
@@ -282,50 +282,50 @@ class StockAnalyzer:
 
     def calculate_score(self, df, market_type='A'):
         """
-        Calculate stock score - Enhanced with Time-Space Resonance Trading System
-        Adjusts scoring weights and criteria based on different market characteristics
+        计算股票评分 - 使用时空共振交易系统增强
+        根据不同的市场特征调整评分权重和标准
         """
         try:
             score = 0
             latest = df.iloc[-1]
             prev_days = min(30, len(df) - 1)  # Get the most recent 30 days or all available data
 
-            # Time-Space Resonance Framework - Dimension 1: Multi-timeframe Analysis
-            # Base weights configuration
+            # 时空共振框架 - 维度1：多时间框架分析
+            # 基础权重配置
             weights = {
-                'trend': 0.30,  # Trend factor weight (daily timeframe)
-                'volatility': 0.15,  # Volatility factor weight
-                'technical': 0.25,  # Technical indicator factor weight
-                'volume': 0.20,  # Volume factor weight (energy conservation dimension)
-                'momentum': 0.10  # Momentum factor weight (weekly timeframe)
+                'trend': 0.30,  # 趋势因子权重（日线级别）
+                'volatility': 0.15,  # 波动率因子权重
+                'technical': 0.25,  # 技术指标因子权重
+                'volume': 0.20,  # 成交量因子权重（能量守恒维度）
+                'momentum': 0.10  # 动量因子权重（周线级别）
             }
 
-            # Adjust weights based on market type (Dimension 1: Timeframe Nesting)
+            # 根据市场类型调整权重（维度1：时间框架嵌套）
             if market_type == 'US':
-                # US stocks prioritize long-term trends
+                # 美股优先考虑长期趋势
                 weights['trend'] = 0.35
                 weights['volatility'] = 0.10
                 weights['momentum'] = 0.15
             elif market_type == 'HK':
-                # HK stocks adjust for volatility and volume
+                # 港股调整波动率和成交量权重
                 weights['volatility'] = 0.20
                 weights['volume'] = 0.25
 
-            # 1. Trend Score (30 points max) - Daily timeframe analysis
+            # 1. 趋势评分（最高30分）- 日线级别分析
             trend_score = 0
 
-            # Moving average evaluation - "three-line formation" pattern
+            # 均线评估 - "三线形态"分析
             if latest['MA5'] > latest['MA20'] and latest['MA20'] > latest['MA60']:
-                # Perfect bullish alignment (dimension 1: daily pattern)
+                # 完美多头排列（维度1：日线形态）
                 trend_score += 15
             elif latest['MA5'] > latest['MA20']:
-                # Short-term uptrend (dimension 1: 5-min pattern)
+                # 短期上升趋势（维度1：5分钟形态）
                 trend_score += 10
             elif latest['MA20'] > latest['MA60']:
-                # Medium-term uptrend
+                # 中期上升趋势
                 trend_score += 5
 
-            # Price position evaluation
+            # 价格位置评估
             if latest['close'] > latest['MA5']:
                 trend_score += 5
             if latest['close'] > latest['MA20']:
@@ -333,101 +333,101 @@ class StockAnalyzer:
             if latest['close'] > latest['MA60']:
                 trend_score += 5
 
-            # Ensure maximum score limit
+            # 确保不超过最高分数限制
             trend_score = min(30, trend_score)
 
-            # 2. Volatility Score (15 points max) - Dimension 2: Filtering
+            # 2. 波动率评分（最高15分）- 维度2：过滤
             volatility_score = 0
 
-            # Moderate volatility is optimal
+            # 适度的波动率最理想
             volatility = latest['Volatility']
             if 1.0 <= volatility <= 2.5:
-                # Optimal volatility, best case
+                # 最佳波动率范围
                 volatility_score += 15
             elif 2.5 < volatility <= 4.0:
-                # Higher volatility, second best
+                # 较高波动率，次优选择
                 volatility_score += 10
             elif volatility < 1.0:
-                # Too low volatility, lacks energy
+                # 波动率过低，缺乏能量
                 volatility_score += 5
             else:
-                # Too high volatility, high risk
+                # 波动率过高，风险较大
                 volatility_score += 0
 
-            # 3. Technical Indicator Score (25 points max) - "Peak Detection System"
+            # 3. 技术指标评分（最高25分）- "峰值检测系统"
             technical_score = 0
 
-            # RSI indicator evaluation (10 points)
+            # RSI指标评估（10分）
             rsi = latest['RSI']
             if 40 <= rsi <= 60:
-                # Neutral zone, stable trend
+                # 中性区域，趋势稳定
                 technical_score += 7
             elif 30 <= rsi < 40 or 60 < rsi <= 70:
-                # Threshold zone, potential reversal signals
+                # 阈值区域，可能出现反转信号
                 technical_score += 10
             elif rsi < 30:
-                # Oversold zone, potential buying opportunity
+                # 超卖区域，可能出现买入机会
                 technical_score += 8
             elif rsi > 70:
-                # Overbought zone, potential selling risk
+                # 超买区域，可能存在卖出风险
                 technical_score += 2
 
-            # MACD indicator evaluation (10 points) - "Peak Warning Signal"
+            # MACD指标评估（10分）- "峰值预警信号"
             if latest['MACD'] > latest['Signal'] and latest['MACD_hist'] > 0:
-                # MACD golden cross and positive histogram
+                # MACD金叉且柱状图为正
                 technical_score += 10
             elif latest['MACD'] > latest['Signal']:
-                # MACD golden cross
+                # MACD金叉
                 technical_score += 8
             elif latest['MACD'] < latest['Signal'] and latest['MACD_hist'] < 0:
-                # MACD death cross and negative histogram
+                # MACD死叉且柱状图为负
                 technical_score += 0
             elif latest['MACD_hist'] > df.iloc[-2]['MACD_hist']:
-                # MACD histogram increasing, potential reversal signal
+                # MACD柱状图增长，可能出现反转信号
                 technical_score += 5
 
-            # Bollinger Band position evaluation (5 points)
+            # 布林带位置评估（5分）
             bb_position = (latest['close'] - latest['BB_lower']) / (latest['BB_upper'] - latest['BB_lower'])
             if 0.3 <= bb_position <= 0.7:
-                # Price in middle zone of Bollinger Bands, stable trend
+                # 价格在布林带中间区域，趋势稳定
                 technical_score += 3
             elif bb_position < 0.2:
-                # Price near lower band, potential oversold
+                # 价格接近下轨，可能超卖
                 technical_score += 5
             elif bb_position > 0.8:
-                # Price near upper band, potential overbought
+                # 价格接近上轨，可能超买
                 technical_score += 1
 
-            # Ensure maximum score limit
+            # 确保最大分数限制
             technical_score = min(25, technical_score)
 
-            # 4. Volume Score (20 points max) - "Energy Conservation Dimension"
+            # 4. 成交量评分（最高20分）- "能量守恒维度"
             volume_score = 0
 
-            # Volume trend analysis
+            # 成交量趋势分析
             recent_vol_ratio = [df.iloc[-i]['Volume_Ratio'] for i in range(1, min(6, len(df)))]
             avg_vol_ratio = sum(recent_vol_ratio) / len(recent_vol_ratio)
 
             if avg_vol_ratio > 1.5 and latest['close'] > df.iloc[-2]['close']:
-                # Volume surge with price increase - "volume energy threshold breakthrough"
+                # 成交量放大且价格上涨 - "成交量能量阈值突破"
                 volume_score += 20
             elif avg_vol_ratio > 1.2 and latest['close'] > df.iloc[-2]['close']:
-                # Volume and price rising together
+                # 成交量和价格同步上涨
                 volume_score += 15
             elif avg_vol_ratio < 0.8 and latest['close'] < df.iloc[-2]['close']:
-                # Decreasing volume with price decrease, potentially healthy correction
+                # 成交量和价格同步下跌，可能是健康回调
                 volume_score += 10
             elif avg_vol_ratio > 1.2 and latest['close'] < df.iloc[-2]['close']:
-                # Volume increasing with price decrease, potentially heavy selling pressure
+                # 成交量增加但价格下跌，可能存在较大卖压
                 volume_score += 0
             else:
-                # Other situations
+                # 其他情况
                 volume_score += 8
 
-            # 5. Momentum Score (10 points max) - Dimension 1: Weekly timeframe
+            # 5. 动量评分（最高10分）- 维度1：周线级别
             momentum_score = 0
 
-            # ROC momentum indicator
+            # ROC动量指标
             roc = latest['ROC']
             if roc > 5:
                 # Strong upward momentum
@@ -445,7 +445,7 @@ class StockAnalyzer:
                 # Strong downward momentum
                 momentum_score += 0
 
-            # Calculate total score based on weighted factors - "Resonance Formula"
+            # 根据加权因子计算总分 - “共振公式”
             final_score = (
                     trend_score * weights['trend'] / 0.30 +
                     volatility_score * weights['volatility'] / 0.15 +
@@ -454,21 +454,21 @@ class StockAnalyzer:
                     momentum_score * weights['momentum'] / 0.10
             )
 
-            # Special market adjustments - "Market Adaptation Mechanism"
+            # 特殊市场调整 - “市场适应机制”
             if market_type == 'US':
-                # US market additional adjustment factors
-                # Check if it's earnings season
+                # 美国市场额外调整因素
+                # 检查是否为财报季
                 is_earnings_season = self._is_earnings_season()
                 if is_earnings_season:
                     # Earnings season has higher volatility, adjust score certainty
                     final_score = 0.9 * final_score + 5  # Slight regression to the mean
 
             elif market_type == 'HK':
-                # HK stocks special adjustment
-                # Check for A-share linkage effect
+                # 港股特殊调整
+                # 检查A股联动效应
                 a_share_linkage = self._check_a_share_linkage(df)
                 if a_share_linkage > 0.7:  # High linkage
-                    # Adjust based on mainland market sentiment
+                    # 根据大陆市场情绪调整
                     mainland_sentiment = self._get_mainland_market_sentiment()
                     if mainland_sentiment > 0:
                         final_score += 5
@@ -497,27 +497,27 @@ class StockAnalyzer:
 
     def calculate_position_size(self, stock_code, risk_percent=2.0, stop_loss_percent=5.0):
         """
-        Calculate optimal position size based on risk management principles
-        Implements the "Position Sizing Formula" from Time-Space Resonance System
+        根据风险管理原则计算最佳仓位大小
+        实施时空共振系统的“仓位大小公式”
 
-        Parameters:
-            stock_code: Stock code to analyze
-            risk_percent: Percentage of total capital to risk on this trade (default 2%)
-            stop_loss_percent: Stop loss percentage from entry point (default 5%)
+        参数:
+            stock_code: 要分析的股票代码
+            risk_percent: 在此交易中承担风险的总资本百分比（默认为2％）
+            stop_loss_percent: 从入场点的止损百分比（默认为5％）
 
-        Returns:
-            Position size as percentage of total capital
+        返回:
+            仓位大小占总资本的百分比
         """
         try:
             # Get stock data
             df = self.get_stock_data(stock_code)
             df = self.calculate_indicators(df)
 
-            # Get volatility factor (from dimension 3: Energy Conservation)
+            # 获取波动率因子（来自维度3：能量守恒）
             latest = df.iloc[-1]
             volatility = latest['Volatility']
 
-            # Calculate volatility adjustment factor (higher volatility = smaller position)
+            # 计算波动率调整因子（较高波动率=较小仓位）
             volatility_factor = 1.0
             if volatility > 4.0:
                 volatility_factor = 0.6  # Reduce position for high volatility stocks
@@ -527,23 +527,23 @@ class StockAnalyzer:
                 volatility_factor = 1.2  # Can increase position for low volatility stocks
 
             # Calculate position size using risk formula
-            # Formula: position_size = (risk_amount) / (stop_loss * volatility_factor)
+            # 公式：position_size = (风险金额) / (止损 * 波动率因子)
             position_size = (risk_percent) / (stop_loss_percent * volatility_factor)
 
-            # Limit maximum position to 25% for diversification
+            # 限制最大仓位为25％以实现多元化
             position_size = min(position_size, 25.0)
 
             return position_size
 
         except Exception as e:
             self.logger.error(f"Error calculating position size: {str(e)}")
-            # Return conservative default position size on error
+            # 返回保守的默认仓位大小（出错时）
             return 5.0
 
     def get_recommendation(self, score, market_type='A', technical_data=None, news_data=None):
         """
-        Generate investment recommendation based on score and additional information
-        Enhanced with Time-Space Resonance Trading System strategies
+        根据得分和附加信息生成投资建议
+        使用时空共振交易系统策略增强
         """
         try:
             # 1. Base recommendation logic - Dynamic threshold adjustment based on score
@@ -689,14 +689,14 @@ class StockAnalyzer:
 
     def check_consecutive_losses(self, trade_history, max_consecutive_losses=3):
         """
-        Implement the "Refractory Period Risk Control" - stop trading after consecutive losses
+        实施“冷静期风险控制” - 连续亏损后停止交易
 
-        Parameters:
-            trade_history: List of recent trade results (True for profit, False for loss)
-            max_consecutive_losses: Maximum allowed consecutive losses
+        参数:
+            trade_history: 最近交易结果列表 (True 表示盈利, False 表示亏损)
+            max_consecutive_losses: 允许的最大连续亏损次数
 
-        Returns:
-            Boolean: True if trading should be paused, False if trading can continue
+        返回:
+            Boolean: True 如果应该暂停交易, False 如果可以继续交易
         """
         consecutive_losses = 0
 
@@ -712,15 +712,15 @@ class StockAnalyzer:
 
     def check_profit_taking(self, current_profit_percent, threshold=20.0):
         """
-        Implement profit-taking mechanism when returns exceed threshold
-        Part of "Energy Conservation Dimension"
+        当回报超过阈值时，实施获利了结机制
+        属于“能量守恒维度”的一部分
 
-        Parameters:
-            current_profit_percent: Current profit percentage
-            threshold: Profit percentage threshold for taking profits
+        参数:
+            current_profit_percent: 当前利润百分比
+            threshold: 用于获利了结的利润百分比阈值
 
-        Returns:
-            Float: Percentage of position to reduce (0.0-1.0)
+        返回:
+            Float: 减少仓位的百分比 (0.0-1.0)
         """
         if current_profit_percent >= threshold:
             # If profit exceeds threshold, suggest reducing position by 50%

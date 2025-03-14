@@ -13,10 +13,11 @@ import numpy as np
 
 class FundamentalAnalyzer:
     def __init__(self):
+        """初始化基础分析类"""
         self.data_cache = {}
 
     def get_financial_indicators(self, stock_code):
-        """获取财务指标"""
+        """获取财务指标数据"""
         try:
             # 获取基本财务指标
             financial_data = ak.stock_financial_analysis_indicator(symbol=stock_code,start_year="2022")

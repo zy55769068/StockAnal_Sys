@@ -11,32 +11,32 @@ class CapitalFlowAnalyzer:
     def __init__(self):
         self.data_cache = {}
 
-        # Set up logging
+        # 设置日志记录
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
 
     def get_concept_fund_flow(self, period="10日排行"):
-        """Get concept/sector fund flow data"""
+        """获取概念/行业资金流向数据"""
         try:
             self.logger.info(f"Getting concept fund flow for period: {period}")
 
-            # Check cache
+            # 检查缓存
             cache_key = f"concept_fund_flow_{period}"
             if cache_key in self.data_cache:
                 cache_time, cached_data = self.data_cache[cache_key]
-                # If cached within the last hour, return cached data
+                # 如果在最近一小时内有缓存数据，则返回缓存数据
                 if (datetime.now() - cache_time).total_seconds() < 3600:
                     return cached_data
 
-            # Get data from akshare
+            # 从akshare获取数据
             concept_data = ak.stock_fund_flow_concept(symbol=period)
 
-            # Process data
+            # 处理数据
             result = []
             for _, row in concept_data.iterrows():
                 try:
-                    # The column names may vary, so we use a flexible approach
+                    # 列名可能有所不同，所以我们使用灵活的方法
                     item = {
                         "rank": int(row.get("序号", 0)),
                         "sector": row.get("行业", ""),
@@ -52,37 +52,37 @@ class CapitalFlowAnalyzer:
                     # self.logger.warning(f"Error processing row in concept fund flow: {str(e)}")
                     continue
 
-            # Cache the result
+            # 缓存结果
             self.data_cache[cache_key] = (datetime.now(), result)
 
             return result
         except Exception as e:
             self.logger.error(f"Error getting concept fund flow: {str(e)}")
             self.logger.error(traceback.format_exc())
-            # Return mock data if API fails
+            # 如果API调用失败则返回模拟数据
             return self._generate_mock_concept_fund_flow(period)
 
     def get_individual_fund_flow_rank(self, period="10日"):
-        """Get individual stock fund flow ranking"""
+        """获取个股资金流向排名"""
         try:
             self.logger.info(f"Getting individual fund flow ranking for period: {period}")
 
-            # Check cache
+            # 检查缓存
             cache_key = f"individual_fund_flow_rank_{period}"
             if cache_key in self.data_cache:
                 cache_time, cached_data = self.data_cache[cache_key]
-                # If cached within the last hour, return cached data
+                # 如果在最近一小时内有缓存数据，则返回缓存数据
                 if (datetime.now() - cache_time).total_seconds() < 3600:
                     return cached_data
 
-            # Get data from akshare
+            # 从akshare获取数据
             stock_data = ak.stock_individual_fund_flow_rank(indicator=period)
 
-            # Process data
+            # 处理数据
             result = []
             for _, row in stock_data.iterrows():
                 try:
-                    # Column names vary based on the period
+                    # 根据不同时间段设置列名前缀
                     period_prefix = "" if period == "今日" else f"{period}"
 
                     item = {
@@ -107,30 +107,30 @@ class CapitalFlowAnalyzer:
                     self.logger.warning(f"Error processing row in individual fund flow rank: {str(e)}")
                     continue
 
-            # Cache the result
+            # 缓存结果
             self.data_cache[cache_key] = (datetime.now(), result)
 
             return result
         except Exception as e:
             self.logger.error(f"Error getting individual fund flow ranking: {str(e)}")
             self.logger.error(traceback.format_exc())
-            # Return mock data if API fails
+            # 如果API调用失败则返回模拟数据
             return self._generate_mock_individual_fund_flow_rank(period)
 
     def get_individual_fund_flow(self, stock_code, market_type="", re_date="10日"):
-        """Get fund flow data for individual stock"""
+        """获取个股资金流向数据"""
         try:
             self.logger.info(f"Getting fund flow for stock: {stock_code}, market: {market_type}")
 
-            # Check cache
+            # 检查缓存
             cache_key = f"individual_fund_flow_{stock_code}_{market_type}"
             if cache_key in self.data_cache:
                 cache_time, cached_data = self.data_cache[cache_key]
-                # If cached within the last hour, return cached data
+                # 如果在一小时内有缓存数据，则返回缓存数据
                 if (datetime.now() - cache_time).total_seconds() < 3600:
                     return cached_data
 
-            # Determine the market type if not provided
+            # 如果未提供市场类型，则根据股票代码判断
             if not market_type:
                 if stock_code.startswith('6'):
                     market_type = "sh"
@@ -139,10 +139,10 @@ class CapitalFlowAnalyzer:
                 else:
                     market_type = "sh"  # Default to Shanghai
 
-            # Get data from akshare
+            # 从akshare获取数据
             flow_data = ak.stock_individual_fund_flow(stock=stock_code, market=market_type)
 
-            # Process data
+            # 处理数据
             result = {
                 "stock_code": stock_code,
                 "data": []
@@ -170,17 +170,16 @@ class CapitalFlowAnalyzer:
                     self.logger.warning(f"Error processing row in individual fund flow: {str(e)}")
                     continue
 
-            # Calculate summary statistics
+            # 计算汇总统计数据
             if result["data"]:
-                # Recent data (last 10 days)
+                # 最近数据 (最近10天)
                 recent_data = result["data"][:min(10, len(result["data"]))]
-
-
 
                 result["summary"] = {
                     "recent_days": len(recent_data),
                     "total_main_net_inflow": sum(item["main_net_inflow"] for item in recent_data),
-                    "avg_main_net_inflow_percent": np.mean([item["main_net_inflow_percent"] for item in recent_data]),
+                    "avg_main_net_inflow_percent": np.mean(
+                        [item["main_net_inflow_percent"] for item in recent_data]),
                     "positive_days": sum(1 for item in recent_data if item["main_net_inflow"] > 0),
                     "negative_days": sum(1 for item in recent_data if item["main_net_inflow"] <= 0)
                 }
@@ -192,28 +191,28 @@ class CapitalFlowAnalyzer:
         except Exception as e:
             self.logger.error(f"Error getting individual fund flow: {str(e)}")
             self.logger.error(traceback.format_exc())
-            # Return mock data if API fails
+            # 如果API调用失败则返回模拟数据
             return self._generate_mock_individual_fund_flow(stock_code, market_type)
 
     def get_sector_stocks(self, sector):
-        """Get stocks in a specific sector"""
+        """获取特定行业的股票"""
         try:
             self.logger.info(f"Getting stocks for sector: {sector}")
 
-            # Check cache
+            # 检查缓存
             cache_key = f"sector_stocks_{sector}"
             if cache_key in self.data_cache:
                 cache_time, cached_data = self.data_cache[cache_key]
-                # If cached within the last hour, return cached data
+                # 如果在一小时内有缓存数据，则返回缓存数据
                 if (datetime.now() - cache_time).total_seconds() < 3600:
                     return cached_data
 
-            # Try to get data from akshare
+            # 尝试从akshare获取数据
             try:
                 # For industry sectors (using 东方财富 interface)
                 stocks = ak.stock_board_industry_cons_em(symbol=sector)
 
-                # Extract stock list
+                # 提取股票列表
                 if not stocks.empty and '代码' in stocks.columns:
                     result = []
                     for _, row in stocks.iterrows():
@@ -231,14 +230,14 @@ class CapitalFlowAnalyzer:
                             # self.logger.warning(f"Error processing row in sector stocks: {str(e)}")
                             continue
 
-                    # Cache the result
+                    # 缓存结果
                     self.data_cache[cache_key] = (datetime.now(), result)
                     return result
             except Exception as e:
                 self.logger.warning(f"Failed to get sector stocks from API: {str(e)}")
-                # Fall through to mock data
+                # 降级到模拟数据
 
-            # If we reach here, we couldn't get data from API, return mock data
+            # 如果到达这里，说明无法从API获取数据，返回模拟数据
             result = self._generate_mock_sector_stocks(sector)
             self.data_cache[cache_key] = (datetime.now(), result)
             return result
@@ -246,15 +245,15 @@ class CapitalFlowAnalyzer:
         except Exception as e:
             self.logger.error(f"Error getting sector stocks: {str(e)}")
             self.logger.error(traceback.format_exc())
-            # Return mock data if API fails
+            # 如果API调用失败则返回模拟数据
             return self._generate_mock_sector_stocks(sector)
 
     def calculate_capital_flow_score(self, stock_code, market_type=""):
-        """Calculate capital flow score for a stock"""
+        """计算股票资金流向评分"""
         try:
             self.logger.info(f"Calculating capital flow score for stock: {stock_code}")
 
-            # Get individual fund flow data
+            # 获取个股资金流向数据
             fund_flow = self.get_individual_fund_flow(stock_code, market_type)
 
             if not fund_flow or not fund_flow.get("data") or not fund_flow.get("summary"):
@@ -276,7 +275,7 @@ class CapitalFlowAnalyzer:
             # Calculate main force score (0-40)
             main_force_score = 0
 
-            # Score based on net inflow percentage
+            # 基于净流入百分比的评分
             if avg_main_net_inflow_percent > 3:
                 main_force_score += 20
             elif avg_main_net_inflow_percent > 1:
@@ -284,7 +283,7 @@ class CapitalFlowAnalyzer:
             elif avg_main_net_inflow_percent > 0:
                 main_force_score += 10
 
-            # Score based on positive days
+            # 基于上涨天数的评分
             positive_ratio = positive_days / recent_days if recent_days > 0 else 0
             if positive_ratio > 0.7:
                 main_force_score += 20
@@ -293,17 +292,18 @@ class CapitalFlowAnalyzer:
             elif positive_ratio > 0.3:
                 main_force_score += 10
 
-            # Calculate large order score (0-30)
+            # 计算大单评分（0-30分）
             large_order_score = 0
 
-            # Analyze super large and large orders
-            recent_super_large = [item["super_large_net_inflow"] for item in fund_flow["data"][:recent_days]]
+            # 分析超大单和大单交易
+            recent_super_large = [item["super_large_net_inflow"] for item in
+                                   fund_flow["data"][:recent_days]]
             recent_large = [item["large_net_inflow"] for item in fund_flow["data"][:recent_days]]
 
             super_large_positive = sum(1 for x in recent_super_large if x > 0)
             large_positive = sum(1 for x in recent_large if x > 0)
 
-            # Score based on super large orders
+            # 基于超大单的评分
             super_large_ratio = super_large_positive / recent_days if recent_days > 0 else 0
             if super_large_ratio > 0.7:
                 large_order_score += 15
@@ -312,7 +312,7 @@ class CapitalFlowAnalyzer:
             elif super_large_ratio > 0.3:
                 large_order_score += 5
 
-            # Score based on large orders
+            # 基于大单的评分
             large_ratio = large_positive / recent_days if recent_days > 0 else 0
             if large_ratio > 0.7:
                 large_order_score += 15
@@ -321,17 +321,17 @@ class CapitalFlowAnalyzer:
             elif large_ratio > 0.3:
                 large_order_score += 5
 
-            # Calculate small order score (0-30)
+            # 计算小单评分（0-30分）
             small_order_score = 0
 
-            # Analyze medium and small orders
+            # 分析中单和小单交易
             recent_medium = [item["medium_net_inflow"] for item in fund_flow["data"][:recent_days]]
             recent_small = [item["small_net_inflow"] for item in fund_flow["data"][:recent_days]]
 
             medium_positive = sum(1 for x in recent_medium if x > 0)
             small_positive = sum(1 for x in recent_small if x > 0)
 
-            # Score based on medium orders
+            # 基于中单的评分
             medium_ratio = medium_positive / recent_days if recent_days > 0 else 0
             if medium_ratio > 0.7:
                 small_order_score += 15
@@ -340,7 +340,7 @@ class CapitalFlowAnalyzer:
             elif medium_ratio > 0.3:
                 small_order_score += 5
 
-            # Score based on small orders
+            # 基于小单的评分
             small_ratio = small_positive / recent_days if recent_days > 0 else 0
             if small_ratio > 0.7:
                 small_order_score += 15
@@ -349,7 +349,7 @@ class CapitalFlowAnalyzer:
             elif small_ratio > 0.3:
                 small_order_score += 5
 
-            # Calculate total score
+            # 计算总评分
             total_score = main_force_score + large_order_score + small_order_score
 
             return {
@@ -372,7 +372,7 @@ class CapitalFlowAnalyzer:
             }
 
     def _parse_percent(self, percent_str):
-        """Parse percentage string to float"""
+        """将百分比字符串转换为浮点数"""
         try:
             if isinstance(percent_str, str) and '%' in percent_str:
                 return float(percent_str.replace('%', ''))
@@ -381,7 +381,7 @@ class CapitalFlowAnalyzer:
             return 0.0
 
     def _generate_mock_concept_fund_flow(self, period):
-        """Generate mock concept fund flow data"""
+        """生成模拟概念资金流向数据"""
         # self.logger.warning(f"Generating mock concept fund flow data for period: {period}")
 
         sectors = [
@@ -392,14 +392,17 @@ class CapitalFlowAnalyzer:
 
         result = []
         for i, sector in enumerate(sectors):
-            # Random data - positive for top half, negative for bottom half
+            # 随机数据 - 前半部分为正，后半部分为负
             is_positive = i < len(sectors) // 2
 
-            inflow = round(np.random.uniform(10, 50), 2) if is_positive else round(np.random.uniform(5, 20), 2)
-            outflow = round(np.random.uniform(5, 20), 2) if is_positive else round(np.random.uniform(10, 50), 2)
+            inflow = round(np.random.uniform(10, 50), 2) if is_positive else round(
+                np.random.uniform(5, 20), 2)
+            outflow = round(np.random.uniform(5, 20), 2) if is_positive else round(
+                np.random.uniform(10, 50), 2)
             net_flow = round(inflow - outflow, 2)
 
-            change_percent = round(np.random.uniform(0, 5), 2) if is_positive else round(np.random.uniform(-5, 0), 2)
+            change_percent = round(np.random.uniform(0, 5), 2) if is_positive else round(
+                np.random.uniform(-5, 0), 2)
 
             item = {
                 "rank": i + 1,
@@ -413,11 +416,11 @@ class CapitalFlowAnalyzer:
             }
             result.append(item)
 
-        # Sort by net flow (descending)
+        # 按净流入降序排序
         return sorted(result, key=lambda x: x["net_flow"], reverse=True)
 
     def _generate_mock_individual_fund_flow_rank(self, period):
-        """Generate mock individual stock fund flow ranking data"""
+        """生成模拟个股资金流向排名数据"""
         # self.logger.warning(f"Generating mock individual fund flow ranking data for period: {period}")
 
         # Sample stock data
@@ -436,7 +439,7 @@ class CapitalFlowAnalyzer:
 
         result = []
         for i, stock in enumerate(stocks):
-            # Random data - positive for top half, negative for bottom half
+            # 随机数据 - 前半部分为正，后半部分为负
             is_positive = i < len(stocks) // 2
 
             main_net_inflow = round(np.random.uniform(1e6, 5e7), 2) if is_positive else round(
@@ -477,14 +480,14 @@ class CapitalFlowAnalyzer:
             }
             result.append(item)
 
-        # Sort by main net inflow (descending)
+        # 按主力净流入降序排序
         return sorted(result, key=lambda x: x["main_net_inflow"], reverse=True)
 
     def _generate_mock_individual_fund_flow(self, stock_code, market_type):
-        """Generate mock individual stock fund flow data"""
+        """生成模拟个股资金流向数据"""
         # self.logger.warning(f"Generating mock individual fund flow data for stock: {stock_code}")
 
-        # Generate 30 days of mock data
+        # 生成30天的模拟数据
         end_date = datetime.now()
 
         result = {
@@ -492,19 +495,19 @@ class CapitalFlowAnalyzer:
             "data": []
         }
 
-        # Create mock price trend (reasonable random walk)
+        # 创建模拟价格趋势（使用合理的随机游走）
         base_price = np.random.uniform(10, 100)
         current_price = base_price
 
         for i in range(30):
             date = (end_date - timedelta(days=i)).strftime('%Y-%m-%d')
 
-            # Random price change (-2% to +2%)
+            # 随机价格变化（-2%到+2%）
             change_percent = np.random.uniform(-2, 2)
             price = round(current_price * (1 + change_percent / 100), 2)
             current_price = price
 
-            # Random fund flow data, somewhat correlated with price change
+            # 随机资金流向数据，与价格变化有一定相关性
             is_positive = change_percent > 0
 
             main_net_inflow = round(np.random.uniform(1e5, 5e6), 2) if is_positive else round(
@@ -541,10 +544,10 @@ class CapitalFlowAnalyzer:
             }
             result["data"].append(item)
 
-        # Sort data by date descending (newest first)
+        # 按日期降序排序（最新的在前）
         result["data"].sort(key=lambda x: x["date"], reverse=True)
 
-        # Calculate summary statistics
+        # 计算汇总统计数据
         recent_data = result["data"][:10]
 
         result["summary"] = {
@@ -558,10 +561,10 @@ class CapitalFlowAnalyzer:
         return result
 
     def _generate_mock_sector_stocks(self, sector):
-        """Generate mock stocks for a sector"""
+        """生成模拟行业股票数据"""
         # self.logger.warning(f"Generating mock sector stocks for: {sector}")
 
-        # Number of stocks to generate
+        # 要生成的股票数量
         num_stocks = np.random.randint(20, 50)
 
         result = []
@@ -581,5 +584,5 @@ class CapitalFlowAnalyzer:
             }
             result.append(item)
 
-        # Sort by main net inflow (descending)
+        # 按主力净流入降序排序
         return sorted(result, key=lambda x: x["main_net_inflow"], reverse=True)
