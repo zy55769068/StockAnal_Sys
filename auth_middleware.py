@@ -11,17 +11,17 @@ def get_api_key():
 
 
 def require_api_key(f):
+    """需要API密钥验证的装饰器"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         api_key = request.headers.get('X-API-Key')
         if not api_key:
-            return jsonify({'error': 'Missing API key'}), 401
+            return jsonify({'error': '缺少API密钥'}), 401
 
         if api_key != get_api_key():
-            return jsonify({'error': 'Invalid API key'}), 403
+            return jsonify({'error': '无效的API密钥'}), 403
 
         return f(*args, **kwargs)
-
     return decorated_function
 
 
@@ -49,11 +49,12 @@ def verify_hmac_signature(request_signature, data, secret_key=None):
 
 
 def require_hmac_auth(f):
+    """需要HMAC认证的装饰器"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         request_signature = request.headers.get('X-HMAC-Signature')
         if not request_signature:
-            return jsonify({'error': 'Missing HMAC signature'}), 401
+            return jsonify({'error': '缺少HMAC签名'}), 401
 
         # 获取请求数据
         data = request.get_json(silent=True) or {}
@@ -61,20 +62,18 @@ def require_hmac_auth(f):
         # 添加时间戳防止重放攻击
         timestamp = request.headers.get('X-Timestamp')
         if not timestamp:
-            return jsonify({'error': 'Missing timestamp'}), 401
+            return jsonify({'error': '缺少时间戳'}), 401
 
-        # 验证时间戳有效性（假设时间戳有效期为5分钟）
+        # 验证时间戳有效性（有效期5分钟）
         current_time = int(time.time())
         if abs(current_time - int(timestamp)) > 300:
-            return jsonify({'error': 'Timestamp expired'}), 401
+            return jsonify({'error': '时间戳已过期'}), 401
 
-        # 添加时间戳到数据
+        # 将时间戳加入验证数据
         verification_data = {**data, 'timestamp': timestamp}
 
         # 验证签名
         if not verify_hmac_signature(request_signature, verification_data):
-            return jsonify({'error': 'Invalid signature'}), 403
-
+            return jsonify({'error': '签名无效'}), 403
         return f(*args, **kwargs)
-
     return decorated_function
