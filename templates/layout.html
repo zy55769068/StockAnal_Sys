@@ -684,6 +684,24 @@
             border-radius: 0;
         }
     }
+    
+    .time-date {
+        position: absolute;
+        left: 0;
+        top: 25px;
+        width: 35px;
+        text-align: right;
+        font-size: 11px;
+        color: #666;
+        font-weight: normal;
+    }
+    
+    /* 调整时间点样式，为日期留出空间 */
+    .time-point {
+        position: relative;
+        padding: 0 0 15px 65px;
+        min-height: 60px; /* 增加高度 */
+    }
 
     </style>
     {% block head %}{% endblock %}
