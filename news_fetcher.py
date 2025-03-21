@@ -193,10 +193,13 @@ class NewsFetcher:
         """获取最近几天的新闻数据"""
         news_data = []
         today = datetime.now()
+        # 记录已处理的日期，便于日志
+        processed_dates = []
         
         # 获取指定天数内的所有新闻
         for i in range(days):
             date = today - timedelta(days=i)
+            date_str = date.strftime('%Y%m%d')
             filename = self.get_news_filename(date)
             
             if os.path.exists(filename):
@@ -204,12 +207,24 @@ class NewsFetcher:
                     with open(filename, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         news_data.extend(data)
+                        processed_dates.append(date_str)
+                        logger.info(f"已加载 {date_str} 新闻数据 {len(data)} 条")
                 except Exception as e:
                     logger.error(f"读取文件 {filename} 时出错: {str(e)}")
+            else:
+                logger.warning(f"日期 {date_str} 的新闻文件不存在: {filename}")
+        
+        # 排序前记录总数
+        total_before_sort = len(news_data)
         
         # 按时间排序并限制条数
-        news_data.sort(key=lambda x: x['datetime'], reverse=True)
-        return news_data[:limit]
+        news_data.sort(key=lambda x: x.get('datetime', ''), reverse=True)
+        result = news_data[:limit]
+        
+        logger.info(f"获取最近 {days} 天新闻(处理日期:{','.join(processed_dates)}), "
+                    f"共 {total_before_sort} 条, 返回最新 {len(result)} 条")
+        
+        return result
 
 # 单例模式的新闻获取器
 news_fetcher = NewsFetcher()
