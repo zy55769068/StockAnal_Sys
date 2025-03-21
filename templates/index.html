@@ -56,10 +56,10 @@
     <!-- 中间新闻区域 -->
     <div class="portal-news">
         <div class="news-header">
-            <h5><i class="fas fa-newspaper"></i> 实时财经要闻</h5>
+            <h5><i class="fas fa-newspaper"></i> 实时快讯（来源：财联社）</h5>
             <div class="news-tools">
                 <button class="btn btn-sm btn-outline-primary refresh-news-btn">
-                    <i class="fas fa-sync-alt"></i> 刷新
+                    <i class="fas fa-sync-alt"></i>
                 </button>
                 <div class="form-check form-check-inline ms-2">
                     <input class="form-check-input" type="checkbox" id="only-important">
@@ -156,7 +156,7 @@
 
             <div class="current-time" id="current-time">
                 当前时间: <span>{{ current_time }}</span>
-                <span class="refresh-time" id="refresh-time">刷新: 10:00</span>
+                <span class="refresh-time" id="refresh-time">刷新: 5:00</span>
             </div>
         </div>
         <div class="ticker-news" id="ticker-container">
@@ -335,43 +335,69 @@ function displayHotspots(hotspots) {
     $('#hotspot-list').html(hotspotsHtml);
 }
 
-// 显示新闻时间线
+// 替换现有的displayNewsTimeline函数
 function displayNewsTimeline(newsList) {
     if (newsList.length === 0) {
         $('#news-timeline').html('<div class="alert alert-info">暂无新闻</div>');
         return;
     }
-
+    
     let timelineHtml = '<div class="news-timeline-container">';
-
-    // 分组新闻按小时
+    
+    // 首先按完整的日期时间排序，确保最新消息在最前面
+    newsList.sort((a, b) => {
+        // 构建完整的日期时间字符串 (YYYY-MM-DD HH:MM)
+        const dateTimeA = (a.date || '') + ' ' + (a.time || '00:00');
+        const dateTimeB = (b.date || '') + ' ' + (b.time || '00:00');
+        
+        // 转换为Date对象进行比较
+        const timeA = new Date(dateTimeA);
+        const timeB = new Date(dateTimeB);
+        
+        // 返回降序结果（最新的在前）
+        return timeB - timeA;
+    });
+    
+    // 按天和时间点分组
     const newsGroups = {};
     newsList.forEach(news => {
-        const time = news.time ? news.time.substring(0, 5) : '00:00'; // 取小时和分钟部分
-        if (!newsGroups[time]) {
-            newsGroups[time] = [];
+        // 创建格式为"YYYY-MM-DD HH:MM"的键
+        const date = news.date || '';
+        const time = news.time || '00:00';
+        
+        // 显示用的键：日期+时间
+        const displayKey = `${date} ${time.substring(0, 5)}`;
+        
+        if (!newsGroups[displayKey]) {
+            newsGroups[displayKey] = [];
         }
-        newsGroups[time].push(news);
+        newsGroups[displayKey].push(news);
     });
-
-    // 按时间排序
-    const sortedTimes = Object.keys(newsGroups).sort((a, b) => {
-        // 将时间转换为数字进行比较
-        const aTime = a.split(':').map(Number);
-        const bTime = b.split(':').map(Number);
-        return (bTime[0] * 60 + bTime[1]) - (aTime[0] * 60 + aTime[1]);
+    
+    // 获取并按时间降序排列所有组键
+    const sortedKeys = Object.keys(newsGroups).sort((a, b) => {
+        const timeA = new Date(a);
+        const timeB = new Date(b);
+        return timeB - timeA;
     });
-
+    
     // 生成时间线HTML
-    sortedTimes.forEach(time => {
-        const newsItems = newsGroups[time];
-
+    sortedKeys.forEach(displayKey => {
+        const newsItems = newsGroups[displayKey];
+        const parts = displayKey.split(' ');
+        const date = parts[0];
+        const time = parts[1];
+        
+        // 格式化显示日期（只在新的一天开始时显示）
+        const formattedDate = formatDate(date);
+        
         timelineHtml += `
             <div class="time-point">
                 <div class="time-label">${time}</div>
+                <div class="time-date">${formattedDate}</div>
                 <div class="news-items">
         `;
-
+        
         newsItems.forEach(news => {
             let contentClass = '';
             // 根据内容中是否含有特定关键词添加样式
@@ -380,28 +406,52 @@ function displayNewsTimeline(newsList) {
             } else if (news.content && (news.content.includes('下跌') || news.content.includes('下降') || news.content.includes('利空'))) {
                 contentClass = 'text-danger';
             }
-
+            
             timelineHtml += `
                 <div class="news-item">
                     <div class="news-content ${contentClass}">${news.content || ''}</div>
                 </div>
             `;
         });
-
+        
         timelineHtml += `
                 </div>
             </div>
         `;
     });
-
+    
     timelineHtml += '</div>';
-
+    
     // 更新DOM
     $('#news-timeline').html(timelineHtml);
 }
 
+// 日期格式化辅助函数
+function formatDate(dateStr) {
+    // 检查是否与当天日期相同
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    if (dateStr === todayStr) {
+        return '';
+    }
+    
+    // 昨天
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    if (dateStr === yesterdayStr) {
+        return '昨天';
+    }
+    
+    // 其他日期用中文格式
+    const date = new Date(dateStr);
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
 // 添加页面自动刷新功能
-let refreshCountdown = 600; // 10分钟倒计时（秒）
+let refreshCountdown = 300; // 5分钟倒计时（秒）
 
 // 更新市场状态
 function updateMarketStatus() {
