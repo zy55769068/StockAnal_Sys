@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build and Upload Docker Image
 
 on:
   push:
@@ -7,12 +7,22 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag zy55769068-stockanal:$(date +%s)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t stockanal_sys:latest .
+
+      - name: Save Docker image as tar
+        run: |
+          docker save -o stockanal_sys.tar stockanal_sys:latest
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: stockanal_sys.tar
